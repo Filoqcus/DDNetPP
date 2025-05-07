@@ -236,11 +236,15 @@ void COneVsOneBlock::OnRoundEnd(CGameState *pGameState)
 				SendChatTarget(pPlayer->GetCid(), "[1vs1] teleportation request aborted because of game end.");
 				pPlayer->GetCharacter()->m_TeleRequest.Abort();
 			}
-			pPlayer->GetCharacter()->Die(pPlayer->GetCid(), WEAPON_MINIGAME);
-			pPlayer->Respawn();
+			if(pPlayer->m_BlockOneVsOneTeleported)
+			{
+				pPlayer->GetCharacter()->Die(pPlayer->GetCid(), WEAPON_MINIGAME);
+				pPlayer->Respawn();
+			}
 		}
 
-		m_aRestorePos[pPlayer->GetCid()] = true;
+		if(pPlayer->m_BlockOneVsOneTeleported)
+			m_aRestorePos[pPlayer->GetCid()] = true;
 	}
 }
 
@@ -473,6 +477,10 @@ void COneVsOneBlock::PlayerTick(CPlayer *pPlayer)
 	CGameState *pGameState = pPlayer->m_pBlockOneVsOneState;
 	dbg_assert(pGameState, "1vs1 without state");
 
+	// don't tick if the other player disconnected in that tick
+	if(!pGameState->m_pPlayer2)
+		return;
+
 	// GameTick
 	// hack to only tick once per tick per game
 	// and not once per player
@@ -491,7 +499,7 @@ void COneVsOneBlock::PlayerTick(CPlayer *pPlayer)
 	}
 
 	CCharacter *pChr = pPlayer->GetCharacter();
-	if(pChr && pChr->HookingSinceSeconds() > g_Config.m_SvOneVsOneAntiGroundHook)
+	if(pChr && pChr->HookingSinceSeconds() > g_Config.m_SvOneVsOneAntiGroundHook && pChr->Core()->HookedPlayer() == -1)
 	{
 		SendChatTarget(pPlayer->GetCid(), GameServer()->Loc("Frozen by anti ground hook", pPlayer->GetCid()));
 		pChr->Freeze();
