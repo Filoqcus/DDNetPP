@@ -2409,7 +2409,7 @@ bool CCharacter::SpecialGunProjectile(vec2 Direction, vec2 ProjStartPos, int Lif
 		);
 		GameServer()->CreateSound(m_Pos, SOUND_PICKUP_HEALTH, Teams()->TeamMask(Team(), -1, m_pPlayer->GetCid()));
 	}
-	else if(m_pPlayer->m_HeartGunActive)
+	else if(m_Heartgun || m_pPlayer->m_HeartGunActive)
 	{
 		new CHeartGun(
 			GameWorld(),
@@ -2732,7 +2732,7 @@ bool CCharacter::FireWeaponDDPP(bool &FullAuto)
 	/*if(m_Core.m_aWeapons[m_Core.m_ActiveWeapon].m_Ammo > 0) // -1 == unlimited
 		m_Core.m_aWeapons[m_Core.m_ActiveWeapon].m_Ammo--;*/
 
-	if(!m_ReloadTimer && !IsDDNetPPHit)
+	if(!m_ReloadTimer)
 	{
 		float FireDelay;
 		if(!m_TuneZone)

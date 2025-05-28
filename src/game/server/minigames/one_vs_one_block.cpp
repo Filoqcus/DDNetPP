@@ -33,7 +33,16 @@ void COneVsOneBlock::OnDeath(CCharacter *pChr, int Killer, int Weapon)
 	CPlayer *pKiller = pState->OtherPlayer(pPlayer);
 	if(pState->IsRunning() && Killer == pKiller->GetCid() && Weapon != WEAPON_GAME && Weapon != WEAPON_MINIGAME)
 	{
-		pKiller->m_MinigameScore++;
+		// only count a draw if the other player is frozen and also in a freeze tile
+		// checking the "in freeze" state is important
+		// because it can happen that both tees hit a freeze roof and fall down
+		// but only one would fall into freeze on the floor and the other one would unfreeze eventually
+		// in that case the player who will fall into the freeze floor should not be able to
+		// trigger a draw by selfkilling before the other one unfreezes
+		if(pKiller->GetCharacter() && pKiller->GetCharacter()->m_FreezeTime && pKiller->GetCharacter()->Core()->m_IsInFreeze)
+			SendChat(pState, "[1vs1] draw");
+		else
+			pKiller->m_MinigameScore++;
 		if(pKiller->GetCharacter())
 		{
 			pKiller->GetCharacter()->Die(pKiller->GetCid(), WEAPON_MINIGAME);
@@ -341,8 +350,7 @@ vec2 COneVsOneBlock::GetNextArenaSpawn(CGameState *pGameState)
 
 	if(Spawn == vec2(-1, -1))
 	{
-		SendChatTarget(pGameState->m_pPlayer1->GetCid(), "[1vs1] no block arena found.");
-		SendChatTarget(pGameState->m_pPlayer2->GetCid(), "[1vs1] no block arena found.");
+		SendChat(pGameState, "[1vs1] no block arena found.");
 		OnRoundEnd(pGameState);
 	}
 	return Spawn;
@@ -492,6 +500,7 @@ void COneVsOneBlock::PlayerTick(CPlayer *pPlayer)
 		{
 			if(pChr1->FrozenSinceSeconds() > 5 && pChr2->FrozenSinceSeconds() > 5)
 			{
+				SendChat(pGameState, "[1vs1] draw");
 				pChr1->Die(pChr1->GetPlayer()->GetCid(), WEAPON_MINIGAME);
 				pChr2->Die(pChr2->GetPlayer()->GetCid(), WEAPON_MINIGAME);
 			}
@@ -499,7 +508,15 @@ void COneVsOneBlock::PlayerTick(CPlayer *pPlayer)
 	}
 
 	CCharacter *pChr = pPlayer->GetCharacter();
-	if(pChr && pChr->HookingSinceSeconds() > g_Config.m_SvOneVsOneAntiGroundHook && pChr->Core()->HookedPlayer() == -1)
+	CCharacter *pOtherChr = pGameState->OtherPlayer(pPlayer)->GetCharacter();
+
+	if(pChr && pChr->IsAlive() && pChr->FrozenSinceSeconds() > 10 && pOtherChr->FrozenSinceSeconds() == 0)
+	{
+		// SendChat(pGameState, "[1vs1] force killed after 10s freeze");
+		pChr->Die(pPlayer->GetCid(), WEAPON_WORLD);
+	}
+
+	if(pChr && pChr->IsAlive() && pChr->HookingSinceSeconds() > g_Config.m_SvOneVsOneAntiGroundHook && pChr->Core()->HookedPlayer() == -1)
 	{
 		SendChatTarget(pPlayer->GetCid(), GameServer()->Loc("Frozen by anti ground hook", pPlayer->GetCid()));
 		pChr->Freeze();
@@ -539,6 +556,14 @@ void COneVsOneBlock::PlayerSlowTick(CPlayer *pPlayer)
 		GameServer()->SendChatTarget(ClientId, aBuf);
 		pPlayer->m_BlockOneVsOneRequestedId = -1;
 	}
+}
+
+void COneVsOneBlock::SendChat(CGameState *pGameState, const char *pMessage)
+{
+	dbg_assert(pGameState, "missing gamestate");
+
+	SendChatTarget(pGameState->m_pPlayer1->GetCid(), pMessage);
+	SendChatTarget(pGameState->m_pPlayer2->GetCid(), pMessage);
 }
 
 CPlayer *COneVsOneBlock::GetInviteSender(const CPlayer *pPlayer)
