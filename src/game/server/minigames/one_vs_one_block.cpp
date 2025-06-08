@@ -11,6 +11,7 @@
 #include <game/server/player.h>
 #include <game/server/teams.h>
 
+#include "game/race_state.h"
 #include "one_vs_one_block.h"
 
 bool COneVsOneBlock::IsActive(int ClientId)
@@ -60,7 +61,7 @@ void COneVsOneBlock::OnTeleportSuccess(CGameState *pGameState, CPlayer *pPlayer)
 	if(pChr)
 	{
 		// force join team
-		pChr->m_DDRaceState = DDRACE_NONE;
+		pChr->m_DDRaceState = ERaceState::NONE;
 	}
 
 	if(!pGameState->m_DDRaceTeam)
@@ -267,14 +268,23 @@ void COneVsOneBlock::OnGameAbort(CGameState *pGameState, CPlayer *pAbortingPlaye
 {
 	// Can not win a game twice
 	if(!pGameState->IsRunning())
+	{
+		// ensure count down games are shutdown properly
+		if(pGameState->m_State != CGameState::EState::ROUND_END)
+		{
+			SendChat(pGameState, "[1vs1] game aborted before it started");
+			OnRoundEnd(pGameState);
+		}
 		return;
+	}
 
 	int Score1 = pGameState->m_pPlayer1->m_MinigameScore;
-	int Score2 = pGameState->m_pPlayer1->m_MinigameScore;
+	int Score2 = pGameState->m_pPlayer2->m_MinigameScore;
 
 	// if nobody did a score yet the game has no winner
 	if(!Score1 && !Score2)
 	{
+		SendChat(pGameState, "[1vs1] game aborted. No winners.");
 		OnRoundEnd(pGameState);
 		return;
 	}
