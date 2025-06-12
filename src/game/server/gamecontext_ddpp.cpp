@@ -556,10 +556,10 @@ bool CGameContext::InitTileDDPP(int Index, int x, int y)
 	}
 	else if(Index == TILE_DDRACE_MODE)
 	{
-		CDDraceMode DDraceMode;
-		DDraceMode.m_Center = vec2(x, y);
-		dbg_msg("game layer", "got ddrace mode tile at (%.2f|%.2f)", DDraceMode.m_Center.x, DDraceMode.m_Center.y);
-		m_DDraceMode.push_back(DDraceMode);
+		CDDRaceMode DDRaceMode;
+		DDRaceMode.m_Center = vec2(x, y);
+		dbg_msg("game layer", "got ddrace mode tile at (%.2f|%.2f)", DDRaceMode.m_Center.x, DDRaceMode.m_Center.y);
+		m_DDRaceMode.push_back(DDRaceMode);
 	}
 	else if(Index == TILE_BOTSPAWN_1)
 	{
@@ -2742,7 +2742,7 @@ void CGameContext::SetIpJailed(int ClientId)
 	}
 	if(!Found) // nothing found so far, find a free slot..
 	{
-		if(m_NumJailIps < MAX_MUTES)
+		if(m_NumJailIps < MAX_JAILS)
 		{
 			m_aJailIps[m_NumJailIps] = *pAddr;
 			m_NumJailIps++;
@@ -2756,7 +2756,7 @@ void CGameContext::SetIpJailed(int ClientId)
 	}
 	else // no free slot found
 	{
-		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "mute", "name change mute array is full!");
+		Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "jail", "ip jail array is full!");
 	}
 }
 
